@@ -23,10 +23,19 @@ Following the download of RStudio, you will need to download the packages associ
 The code presented within this repository was originally created by [Marco Chau](https://www.linkedin.com/in/marco-chau-8897091b1/?originalSubdomain=ca). It has since been updated by [Chloe Thierstein](https://www.linkedin.com/in/chloe-t-850246249/). 
 
 The University of Toronto Libraries Respond to Updated Tri-Agency OA Mandate Working Group consists of:
-* (Naz Torabi)[https://onesearch.library.utoronto.ca/library-staff/naz-torabi] (Chair)
-* (Erin Calhoun)[https://onesearch.library.utoronto.ca/library-staff/erin-calhoun]
-* (Shelby Thaysen)[https://onesearch.library.utoronto.ca/library-staff/shelby-thaysen]
-* 
+* [Naz Torabi](https://onesearch.library.utoronto.ca/library-staff/naz-torabi) (Co-Lead)
+* [Graeme Slaght](https://onesearch.library.utoronto.ca/library-staff/graeme-slaght) (Co-Lead)
+* [Erin Calhoun](https://onesearch.library.utoronto.ca/library-staff/erin-calhoun)
+* [Shelby Thaysen](https://onesearch.library.utoronto.ca/library-staff/shelby-thaysen)
+* [Chloe Thierstein](https://www.linkedin.com/in/chloe-t-850246249/)
+* [Kate Johnson](https://onesearch.library.utoronto.ca/library-staff/kate-johnson)
+* [Garni Assadourian](https://onesearch.library.utoronto.ca/library-staff/garni-assadourian)
+* [Andrew Ip](https://onesearch.library.utoronto.ca/library-staff/andrew-ip)
+* [Holly Inglis](https://onesearch.library.utoronto.ca/library-staff/holly-inglis)
+* [Madeline Gerbig](https://onesearch.library.utoronto.ca/library-staff/madeline-gerbig)
+* [Yayo Umetsubo](https://onesearch.library.utoronto.ca/library-staff/yayo-umetsubo)
+* [Michelle Spence](https://onesearch.library.utoronto.ca/library-staff/michelle-spence)
+
 
 
 
