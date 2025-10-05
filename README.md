@@ -3,7 +3,7 @@
 ## Overview
 This repository contains all input files necessary for extracting institutionally affiliated author publications in a given date range for a specific publisher. The data corpus formed through htis code include corresponding and non-corresponding author information for open access and closed articles. The resulting corpus can provide insights into the number and types of articles and adjacent documents that affiliated authors publish, which can be used to inform future open access publishing policies. 
 
-The University of Toronto Libraries 'Respond to Updated Tri-Agency OA Mandate' Working Group used this data corpus to identify publishers for evaluation of author rights and compliance in light of the Tri-Agency Policy on Open Access Publications. A selection of Working Group members presented this data alongside their publisher evaluation criteria at the [1st Canadian Conference on Open Science and Open Scholarship](https://oscanada.github.io/en/) on October 8, 2025, in Montreal, QC, Canada.
+The University of Toronto Libraries 'Respond to Updated Tri-Agency OA Mandate' Working Group used this data corpus to identify publishers for evaluation of author rights and compliance in light of the Tri-Agency Policy on Open Access Publications. A selection of Working Group members presented data obtained from this repository's code alongside their publisher evaluation criteria at the [1st Canadian Conference on Open Science and Open Scholarship](https://oscanada.github.io/en/) on October 8, 2025, in Montreal, QC, Canada.
 
 ## Requirements 
 The code require RStudio. To run the code stored in this github, you will need to have both of these installed. We recommend using RStudio on your local computer or Posit Cloud as your IDE. 
