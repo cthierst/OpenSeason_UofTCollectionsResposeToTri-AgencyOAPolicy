@@ -1,0 +1,477 @@
+---
+title: "Publisher call and cleaning"
+author: "Marco Chau"
+edited by: "Chloe Thierstein"
+date: "2024-2-12"
+updated: "2025-05-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(writexl)
+library(readr)
+library(openalexR)
+library(tidyverse)
+library(readxl)
+```
+
+
+```{r}
+# OpenAlex - download data where any affiliated author is from UofT
+options(openalexR.mailto = "example.email@institution.ca") # UPDATE with your OpenAlex API key. This takes the form of your email address once you have set it up.
+openAlex_data <- oa_fetch(
+  entity = "works",
+  locations.source.publisher_lineage = "P4310320595", # UPDATE Publisher ID
+  from_publication_date = "2019-01-01",
+  to_publication_date = "2024-12-31",
+  authorships.institutions.id = "https://openalex.org/I185261750", # UofT ID
+)
+```
+
+```{r}
+# OpenAlex - download data where corresponding author is from UofT
+options(openalexR.mailto = "example.email@institution.ca") # UPDATE with your OpenAlex API key. This takes the form of your email address once you have set it up.
+openAlex_data_utca <- oa_fetch(
+  entity = "works",
+  locations.source.publisher_lineage = 	"https://openalex.org/P4310320595", # UPDATE Publisher ID 
+  from_publication_date = "2019-01-01",
+  to_publication_date = "2024-12-31",
+  corresponding_institution_ids = "https://openalex.org/I185261750" # UofT ID
+)
+```
+
+```{r}
+save(openAlex_data, file = "./code_data/openAlex_data.RData")
+save(openAlex_data_utca, file = "./code_data/openAlex_data_utca.RData")
+```
+
+```{r}
+load("./code_data/openAlex_data.RData")
+load("./code_data/openAlex_data_utca.RData")
+```
+
+
+```{r}
+openAlex_data <- 
+  openAlex_data %>%
+  cbind("Corresponding Author" = NA)
+
+openAlex_data_utca <- 
+  openAlex_data_utca %>%
+  cbind("Corresponding Author" = "University of Toronto Author (Unknown)")
+
+# Add corresponding author column to OpenAlex df
+openAlex_combined <- rbind(openAlex_data, openAlex_data_utca)
+
+# Remove duplicate rows, prioritize keeping rows with corresponding author = UofT
+openAlex_combined <- openAlex_combined %>%
+  arrange(desc(!is.na(`Corresponding Author`) & `Corresponding Author` != ""), doi) %>%
+  distinct(doi, .keep_all = TRUE)
+
+
+```
+
+
+```{r}
+# Cleaning openAlex data
+# Combine openAlex_data and openAlex_data with corresponding institution as UofT
+
+# Make a list of work types and filter openAlex data for it
+openAlex_work_type <- unique(openAlex_combined$type)
+
+openAlex_work_type <- as.data.frame(openAlex_work_type)
+
+openAlex_work_filter_list <- list("article",
+                                  "editorial",
+                                  "review",
+                                  "book-chapter",
+                                  "retraction",
+                                  "erratum")
+
+# Filter for the relevent works and remove text before DOI value
+clean_openAlex <- openAlex_combined %>%
+  filter(grepl(paste(openAlex_work_filter_list, collapse = "|"), type)) %>%
+  mutate(doi = gsub("https?://doi.org/", "", doi))
+
+# Convert DOI to uppercase for case-insensitive comparison
+clean_openAlex$doi <- toupper(clean_openAlex$doi)
+
+clean_openAlex <- clean_openAlex %>%
+  distinct(doi, .keep_all = TRUE)
+```
+
+```{r}
+SCOPUS_dir <- file.path(getwd(), "scopus")
+
+# Define a function to standardize the Volume column type
+standardize_volume_column <- function(df) {
+  df %>%
+    mutate(Volume = as.character(Volume))  # Convert Volume to character
+}
+
+# Read the SCOPUS CSVs
+scopus_data <- list.files(SCOPUS_dir, full.names = TRUE) %>%
+  map_dfr(~ read_csv(.x) %>% standardize_volume_column())
+```
+
+```{r}
+# Cleaning SCOPUS data
+scopus_publisher_list <- unique(scopus_data$Publisher)
+
+scopus_publisher_list <- as.data.frame(scopus_publisher_list)
+
+publisher_list <- list("John Wiley and Sons Inc","John Wiley and Sons Ltd") # UPDATE Change this text to a list of the publisher's journals
+
+publisher_scopus <- scopus_data %>%
+  filter(grepl(paste(publisher_list, collapse = "|"), Publisher))
+
+publisher_scopus$DOI <- toupper(publisher_scopus$DOI)
+
+publisher_scopus <- publisher_scopus %>%
+  distinct(DOI, .keep_all = TRUE)
+
+scopus_non_toronto <- publisher_scopus[!grepl("University of Toronto", publisher_scopus$Affiliations), ]
+publisher_scopus <- publisher_scopus[grepl("University of Toronto", publisher_scopus$Affiliations), ]
+
+# Keep text before ";"
+#publisher_scopus$`Correspondence Address` <- sub(";.*", "", publisher_scopus$`Correspondence Address`)
+
+# Standardize the Corresponding Author column
+names(publisher_scopus)[grepl("correspondence", names(publisher_scopus), ignore.case = TRUE)] <- "Corresponding Author"
+
+# If missing entirely, create an empty column so select() won't fail
+if (!"Corresponding Author" %in% names(publisher_scopus)) {
+  publisher_scopus$`Corresponding Author` <- NA
+}
+
+
+```
+
+Examining the duplicates on SCOPUS, the duplicated works are all books / book chapters. These works are duplicated because the books have been published again as indicated by the works having 2 ISBN numbers, hence the duplication. 
+
+```{r}
+# Load in WoS data
+# Define the path to the WoS directory
+wos_dir <- "WoS"
+
+# Function to read and return the data from an xls file
+read_wos_file <- function(file) {
+  data <- read_excel(file)  # Read the xls file
+  
+  # Convert specific columns to character to standardize types
+  data <- data %>%
+    mutate(
+      Volume = as.character(Volume),             # Ensure Volume is character
+      Issue = as.character(Issue),               # Ensure Issue is character
+      Supplement = as.character(Supplement),     # Ensure Supplement is character
+      `Part Number` = as.character(`Part Number`),  # Ensure Part Number is character
+      `Article Number` = as.character(`Article Number`)  # Ensure Article Number is character
+    )
+  
+  return(data)
+}
+
+# Load all xls files in the WoS directory and combine into one dataframe
+wos_data <- list.files(wos_dir, pattern = "\\.xls$", full.names = TRUE) %>%
+  lapply(function(x) {
+    df <- read_wos_file(x)
+    df %>%
+      mutate(across(everything(), as.character))  # force all columns to character for binding
+  }) %>%
+  bind_rows()
+
+
+```
+
+```{r}
+# Clean WoS data
+publisher_wos <- wos_data %>%
+  select(`Publication Year`,
+         `Author Full Names`,
+         `Article Title`,
+         `Source Title`,
+         `Document Type`,
+         Affiliations,
+         Publisher,
+         ISSN,
+         DOI,
+         `WoS Categories`,
+         `Reprint Addresses`,
+         `Open Access Designations`
+         )
+
+publisher_wos$DOI <- toupper(publisher_wos$DOI)
+publisher_wos <- publisher_wos %>%
+  distinct(DOI, .keep_all = TRUE)
+
+wos_non_toronto <- publisher_wos[!grepl("University of Toronto", publisher_wos$Affiliations), ]
+publisher_wos <- publisher_wos[grepl("University of Toronto", publisher_wos$Affiliations), ]
+
+
+# Clean reprint address column to keep only CA name
+#publisher_wos$`Reprint Addresses` <-
+  #sub("\\(corresponding author\\).*", 
+      #"",
+      #publisher_wos$`Reprint Addresses`)
+
+# Rename columns
+names(publisher_wos)[names(publisher_wos) == "Reprint Addresses"] <- "Corresponding Author"
+names(publisher_wos)[names(publisher_wos) == "Open Access Designations"] <- "OA Type"
+```
+
+```{r}
+# Define the desired column order
+col_order <- c(
+  "Publisher",
+  "Affiliations",
+  "ISSN",
+  "Journal Title",
+  "Document Type",
+  "DOI", 
+  "Title",
+  "Corresponding Author",
+  "Authors",
+  "OA Type",
+  "Publication Year",
+  "Source")
+
+col_order_final <- c(
+  "Publisher",
+  "UTCA",
+  "Affiliations",
+  "ISSN",
+  "Journal Title",
+  "Document Type",
+  "DOI", 
+  "Title",
+  "Corresponding Author",
+  "Authors",
+  "OA Type",
+  "Publication Year",
+  "Source")
+```
+
+names(publisher_scopus)
+
+```{r}
+# Create a trimmed version of the publisher_scopus dataframe
+publisher_scopus_trimmed <- publisher_scopus %>%
+  select(Year,
+         Authors, 
+         Title,
+         `Source title`,  # Note: original column name in publisher_scopus
+         DOI,
+         ISSN,
+         `Open Access`,
+         Affiliations,
+         Publisher,
+         `Document Type`,
+         Source,
+         `Corresponding Author`)
+
+# Rename the columns
+names(publisher_scopus_trimmed)[names(publisher_scopus_trimmed) == "Source title"] <- "Journal Title"
+names(publisher_scopus_trimmed)[names(publisher_scopus_trimmed) == "Year"] <- "Publication Year"
+names(publisher_scopus_trimmed)[names(publisher_scopus_trimmed) == "Open Access"] <- "OA Type"
+
+publisher_scopus_trimmed <- publisher_scopus_trimmed[, col_order]
+
+# Clean WOS dataframe
+publisher_wos_trimmed <- publisher_wos %>%
+  select(`Publication Year`,
+         `Author Full Names`,
+         `Article Title`,
+         `Source Title`,
+         `Document Type`,
+         Affiliations,
+         Publisher,
+         DOI,
+         ISSN,
+         `OA Type`,
+         `Corresponding Author`)
+
+
+publisher_wos_trimmed <- 
+  publisher_wos_trimmed %>%
+  cbind("Source" = "Web of Science")
+
+names(publisher_wos_trimmed)[names(publisher_wos_trimmed) == "Author Full Names"] <- "Authors"
+names(publisher_wos_trimmed)[names(publisher_wos_trimmed) == "Source Title"] <- "Journal Title"
+names(publisher_wos_trimmed)[names(publisher_wos_trimmed) == "Article Title"] <- "Title"
+
+publisher_wos_trimmed <- publisher_wos_trimmed[, col_order]
+
+# Clean openAlex dataframe
+clean_openAlex_trimmed <- 
+  clean_openAlex %>%
+  select(title,
+         host_organization,
+         doi,
+         type,
+         `Corresponding Author`,
+         publication_date,
+         issn_l,
+         oa_status) %>%
+  mutate(Source = "OpenAlex",
+         Authors = NA,
+         `Journal Title` = NA,
+         Affiliations = NA)
+
+# Extract author names
+# Assuming 'author' column is in the original dataframe (clean_openAlex)
+clean_openAlex_trimmed <- clean_openAlex_trimmed %>%
+  mutate(Authors = sapply(clean_openAlex$author, function(x) {
+    # Check if 'x' is a list or dataframe
+    if (is.data.frame(x) || is.list(x)) {
+      # Extract 'au_display_name' column and collapse into a comma-separated string
+      paste(x$au_display_name, collapse = ", ")
+    } else {
+      # Return NA if the structure is unexpected
+      NA
+    }
+  }))
+
+# Etract only the year value 
+clean_openAlex_trimmed$publication_date <- substr(clean_openAlex_trimmed$publication_date, 1, 4)
+                                                     
+names(clean_openAlex_trimmed)[names(clean_openAlex_trimmed) == "title"] <- "Title"
+names(clean_openAlex_trimmed)[names(clean_openAlex_trimmed) == "issn_l"] <- "ISSN"
+names(clean_openAlex_trimmed)[names(clean_openAlex_trimmed) == "oa_status"] <- "OA Type"
+names(clean_openAlex_trimmed)[names(clean_openAlex_trimmed) == "host_organization"] <- "Publisher"
+names(clean_openAlex_trimmed)[names(clean_openAlex_trimmed) == "doi"] <- "DOI"
+names(clean_openAlex_trimmed)[names(clean_openAlex_trimmed) == "type"] <- "Document Type"
+names(clean_openAlex_trimmed)[names(clean_openAlex_trimmed) == "publication_date"] <- "Publication Year"
+
+clean_openAlex_trimmed <- clean_openAlex_trimmed[, col_order]
+
+# Add a Source column to each dataframe to identify the origin
+publisher_scopus_trimmed$Source <- "Scopus"
+publisher_wos_trimmed$Source <- "Web of Science"
+clean_openAlex_trimmed$Source <- "Open Alex"
+
+# Convert 'Publication Year' to numeric in all dataframes
+publisher_scopus_trimmed$`Publication Year` <- as.numeric(publisher_scopus_trimmed$`Publication Year`)
+publisher_wos_trimmed$`Publication Year` <- as.numeric(publisher_wos_trimmed$`Publication Year`)
+clean_openAlex_trimmed$`Publication Year` <- as.numeric(clean_openAlex_trimmed$`Publication Year`)
+
+# Merge the dataframes
+publisher_merged <- bind_rows(publisher_scopus_trimmed, publisher_wos_trimmed, clean_openAlex_trimmed)
+
+# Sort by DOI and Source priority (WOS > Scopus > Open Alex)
+publisher_merged_sorted <- publisher_merged %>%
+  arrange(DOI, 
+          Source == "Open Alex",  # Open Alex has the lowest priority
+          Source == "Scopus",     # Scopus has medium priority
+          Source == "Web of Science")  # Web of Science has the highest priority
+
+# Now, group by DOI, and summarize to keep the highest priority row for each DOI
+wiley_merged2 <- publisher_merged_sorted %>%
+  group_by(DOI) %>%
+  summarize(
+    across(everything(), ~ first(.)),  # Keep the first (highest priority) row for each DOI
+    Source = paste(unique(Source), collapse = ", ")  # Combine all sources in the 'Source' column
+  ) %>%
+  ungroup()
+
+# Now, group by Title (case-insensitive) to remove duplicate titles while keeping the highest priority source
+wiley_merged2 <- wiley_merged2 %>%
+  group_by(Title_lower = tolower(Title)) %>%  # Convert Title to lowercase for case-insensitive grouping
+  summarize(
+    across(everything(), ~ first(.)),  # Keep the first (highest priority) row for each Title
+    Source = paste(unique(Source), collapse = ", ")  # Combine all sources in the 'Source' column
+  ) %>%
+  ungroup()
+
+# Drop the Title_lower column
+wiley_merged2 <- wiley_merged2[, !colnames(wiley_merged2) %in% "Title_lower"]
+
+# Limit all character columns to 150 characters
+wiley_merged2[] <- lapply(wiley_merged2, function(col) {
+  if (is.character(col)) {
+    substr(col, 1, 300)
+  } else {
+    col
+  }
+})
+
+```
+
+```{r}
+# Filter out books, editorials, and early access papers
+wiley_merged2 <-
+  wiley_merged2[!grepl("book|editorial|Early",
+                    wiley_merged2$`Document Type`,
+                    ignore.case = TRUE), ]
+
+# Shorten author lists if they are > 10 names
+wiley_merged2$Authors <- sapply(strsplit(wiley_merged2$Authors, ";"), function(authors) {
+  if (length(authors) > 10) {
+    paste(c(authors[1:10], "etc."), collapse = "; ")
+  } else {
+    paste(authors, collapse = "; ")
+  }
+})
+
+# Standardize document types
+wiley_merged2 <- wiley_merged2 %>%
+  mutate(
+    `Document Type` = case_when(
+      grepl("data", `Document Type`, ignore.case = TRUE) ~ "Data Paper",
+      grepl("proceeding", `Document Type`, ignore.case = TRUE) ~ "Proceedings Paper",
+      grepl("retract", `Document Type`, ignore.case = TRUE) ~ "Retraction",
+      TRUE ~ tools::toTitleCase(`Document Type`)  # Convert any remaining text to title case only
+    )
+  )
+
+# Count rows by Source using table
+source_counts <- table(wiley_merged2$Source)
+
+# Display the result
+source_counts
+```
+
+
+```{r}
+# Clean the "OA Type" column
+wiley_merged <- wiley_merged2 %>% # UPDATE "publisher_merged" to match current publisher i.e., csp_merged
+  mutate(`OA Type` = ifelse(grepl("(?i)gold|hybrid", `OA Type`), 
+                            gsub(".*(?i)(gold|hybrid).*", "\\1", `OA Type`) %>% tools::toTitleCase(), # Extract and convert to title case
+                            "Not OA")) # Replace all others with "Not OA"
+```
+
+```{r}
+# Create the UTCA column based on the 'Corresponding Author' column condition
+wiley_merged <- wiley_merged %>%  # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
+  mutate(UTCA = ifelse(grepl("Univ Toronto|utoronto|University of Toronto", 
+                             `Corresponding Author`, 
+                             ignore.case = TRUE), 
+                       "Yes", 
+                       "No"))
+```
+
+```{r}
+wiley_merged <- wiley_merged[, col_order_final] # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
+
+write_csv(wiley_merged, "./Output/wiley_merged.csv") # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
+write_xlsx(wiley_merged, "./Output/wiley_merged.xlsx")  # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
+```
+
+```{r}
+# Make a new CSV where UofT is the corresponding institution (only Scopus and WOS)
+wiley_merged_utca <-  # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
+  wiley_merged [grepl("Univ Toronto|utoronto|University of Toronto", wiley_merged$`Corresponding Author`, ignore.case =  TRUE), ] # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
+
+# Count rows for each unique Source
+source_counts <- table(wiley_merged_utca$Source) # UPDATE "publisher_merged" to match current publisher i.e., csp_merged
+
+# Display the counts
+source_counts
+
+write_csv(wiley_merged_utca, "./Output/wiley_merged_utca.csv") # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
+write_xlsx(wiley_merged_utca,"./Output/wiley_merged_utca.xlsx") # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
+```
