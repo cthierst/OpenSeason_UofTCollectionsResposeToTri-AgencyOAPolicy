@@ -125,7 +125,7 @@ scopus_publisher_list <- unique(scopus_data$Publisher)
 
 scopus_publisher_list <- as.data.frame(scopus_publisher_list)
 
-publisher_list <- list("John Wiley and Sons Inc","John Wiley and Sons Ltd") # UPDATE Change this text to a list of the publisher's journals
+publisher_list <- list("publisher name from publisher column") # UPDATE Change this text to a list of the publisher's journals
 
 publisher_scopus <- scopus_data %>%
   filter(grepl(paste(publisher_list, collapse = "|"), Publisher))
@@ -370,7 +370,7 @@ publisher_merged_sorted <- publisher_merged %>%
           Source == "Web of Science")  # Web of Science has the highest priority
 
 # Now, group by DOI, and summarize to keep the highest priority row for each DOI
-wiley_merged2 <- publisher_merged_sorted %>%
+publisher_merged2 <- publisher_merged_sorted %>%
   group_by(DOI) %>%
   summarize(
     across(everything(), ~ first(.)),  # Keep the first (highest priority) row for each DOI
@@ -379,7 +379,7 @@ wiley_merged2 <- publisher_merged_sorted %>%
   ungroup()
 
 # Now, group by Title (case-insensitive) to remove duplicate titles while keeping the highest priority source
-wiley_merged2 <- wiley_merged2 %>%
+publisher_merged2 <- publisher_merged2 %>%
   group_by(Title_lower = tolower(Title)) %>%  # Convert Title to lowercase for case-insensitive grouping
   summarize(
     across(everything(), ~ first(.)),  # Keep the first (highest priority) row for each Title
@@ -388,10 +388,10 @@ wiley_merged2 <- wiley_merged2 %>%
   ungroup()
 
 # Drop the Title_lower column
-wiley_merged2 <- wiley_merged2[, !colnames(wiley_merged2) %in% "Title_lower"]
+publisher_merged2 <- publisher_merged2[, !colnames(publisher_merged2) %in% "Title_lower"]
 
 # Limit all character columns to 150 characters
-wiley_merged2[] <- lapply(wiley_merged2, function(col) {
+publisher_merged2[] <- lapply(publisher_merged2, function(col) {
   if (is.character(col)) {
     substr(col, 1, 300)
   } else {
@@ -403,13 +403,13 @@ wiley_merged2[] <- lapply(wiley_merged2, function(col) {
 
 ```{r}
 # Filter out books, editorials, and early access papers
-wiley_merged2 <-
-  wiley_merged2[!grepl("book|editorial|Early",
-                    wiley_merged2$`Document Type`,
+publisher_merged2 <-
+  publisher_merged2[!grepl("book|editorial|Early",
+                    publisher_merged2$`Document Type`,
                     ignore.case = TRUE), ]
 
 # Shorten author lists if they are > 10 names
-wiley_merged2$Authors <- sapply(strsplit(wiley_merged2$Authors, ";"), function(authors) {
+publisher_merged2$Authors <- sapply(strsplit(publisher_merged2$Authors, ";"), function(authors) {
   if (length(authors) > 10) {
     paste(c(authors[1:10], "etc."), collapse = "; ")
   } else {
@@ -418,7 +418,7 @@ wiley_merged2$Authors <- sapply(strsplit(wiley_merged2$Authors, ";"), function(a
 })
 
 # Standardize document types
-wiley_merged2 <- wiley_merged2 %>%
+publisher_merged2 <- publisher_merged2 %>%
   mutate(
     `Document Type` = case_when(
       grepl("data", `Document Type`, ignore.case = TRUE) ~ "Data Paper",
@@ -429,7 +429,7 @@ wiley_merged2 <- wiley_merged2 %>%
   )
 
 # Count rows by Source using table
-source_counts <- table(wiley_merged2$Source)
+source_counts <- table(publisher_merged2$Source)
 
 # Display the result
 source_counts
@@ -438,7 +438,7 @@ source_counts
 
 ```{r}
 # Clean the "OA Type" column
-wiley_merged <- wiley_merged2 %>% # UPDATE "publisher_merged" to match current publisher i.e., csp_merged
+publisher_merged <- publisher_merged2 %>% # UPDATE "publisher_merged" to match current publisher i.e., csp_merged
   mutate(`OA Type` = ifelse(grepl("(?i)gold|hybrid", `OA Type`), 
                             gsub(".*(?i)(gold|hybrid).*", "\\1", `OA Type`) %>% tools::toTitleCase(), # Extract and convert to title case
                             "Not OA")) # Replace all others with "Not OA"
@@ -446,7 +446,7 @@ wiley_merged <- wiley_merged2 %>% # UPDATE "publisher_merged" to match current p
 
 ```{r}
 # Create the UTCA column based on the 'Corresponding Author' column condition
-wiley_merged <- wiley_merged %>%  # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
+publisher_merged <- publisher_merged %>%  # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
   mutate(UTCA = ifelse(grepl("Univ Toronto|utoronto|University of Toronto", 
                              `Corresponding Author`, 
                              ignore.case = TRUE), 
@@ -455,23 +455,23 @@ wiley_merged <- wiley_merged %>%  # UPDATE "publisher_merged" to match current p
 ```
 
 ```{r}
-wiley_merged <- wiley_merged[, col_order_final] # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
+publisher_merged <- publisher_merged[, col_order_final] # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
 
-write_csv(wiley_merged, "./Output/wiley_merged.csv") # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
-write_xlsx(wiley_merged, "./Output/wiley_merged.xlsx")  # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
+write_csv(publisher_merged, "./Output/publisher_merged.csv") # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
+write_xlsx(publisher_merged, "./Output/publisher_merged.xlsx")  # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
 ```
 
 ```{r}
 # Make a new CSV where UofT is the corresponding institution (only Scopus and WOS)
-wiley_merged_utca <-  # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
-  wiley_merged [grepl("Univ Toronto|utoronto|University of Toronto", wiley_merged$`Corresponding Author`, ignore.case =  TRUE), ] # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
+publisher_merged_utca <-  # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
+  publisher_merged [grepl("Univ Toronto|utoronto|University of Toronto", publisher_merged$`Corresponding Author`, ignore.case =  TRUE), ] # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
 
 # Count rows for each unique Source
-source_counts <- table(wiley_merged_utca$Source) # UPDATE "publisher_merged" to match current publisher i.e., csp_merged
+source_counts <- table(publisher_merged_utca$Source) # UPDATE "publisher_merged" to match current publisher i.e., csp_merged
 
 # Display the counts
 source_counts
 
-write_csv(wiley_merged_utca, "./Output/wiley_merged_utca.csv") # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
-write_xlsx(wiley_merged_utca,"./Output/wiley_merged_utca.xlsx") # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
+write_csv(publisher_merged_utca, "./Output/publisher_merged_utca.csv") # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
+write_xlsx(publisher_merged_utca,"./Output/publisher_merged_utca.xlsx") # UPDATE "publisher_merged" to match current publisher i.e., csp_merged *Make sure you update both here
 ```
