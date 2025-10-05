@@ -19,6 +19,14 @@ Following the download of RStudio, you will need to download the packages associ
 ## Downloading Data
 Instructions to download data needed to run this code is available [here](Insert link to workflow). This document provides an overview of the manual data downloading required and describes the process undertaken by the code to pull in OpenAlex data using an API, clean the individual data source code, and compile the deduplicate results. 
 
+## Using the Repository
+* Download the repository as a ZIP file to your computer
+* Input data collected into their respective folders (i.e., Scopus data in "scopus" and WOS data in "wos"
+* Open the Rproj and Rmd file
+* Follow the "UPDATE" comments throughout the Rmd file to make changes to the code to suit your needs
+* Run code
+* A CSV and XLSX version of the results (corresponding author and not) will be available in the output folder.
+
 ## Acknowledgments
 The code presented within this repository was originally created by [Marco Chau](https://www.linkedin.com/in/marco-chau-8897091b1/?originalSubdomain=ca). It has since been updated by [Chloe Thierstein](https://www.linkedin.com/in/chloe-t-850246249/). 
 
