@@ -29,7 +29,7 @@ openAlex_data <- oa_fetch(
   locations.source.publisher_lineage = "P4310320595", # UPDATE Publisher ID
   from_publication_date = "2019-01-01",
   to_publication_date = "2024-12-31",
-  authorships.institutions.id = "https://openalex.org/I185261750", # UofT ID
+  authorships.institutions.id = "https://openalex.org/I185261750", # UPDATE institutions ID. The one here is for UofT
 )
 ```
 
@@ -41,7 +41,7 @@ openAlex_data_utca <- oa_fetch(
   locations.source.publisher_lineage = 	"https://openalex.org/P4310320595", # UPDATE Publisher ID 
   from_publication_date = "2019-01-01",
   to_publication_date = "2024-12-31",
-  corresponding_institution_ids = "https://openalex.org/I185261750" # UofT ID
+  corresponding_institution_ids = "https://openalex.org/I185261750" # UPDATE institutions ID. The one here is for UofT
 )
 ```
 
