@@ -17,7 +17,7 @@ Following the download of RStudio, you will need to download the packages associ
 * readxl
 
 ## Downloading Data
-Instructions to download data needed to run this code is available [here]([Insert link to workflow](https://acrobat.adobe.com/id/urn:aaid:sc:VA6C2:1692e4dc-701d-4344-b38b-0fa9e4b491db)). This document provides an overview of the manual data downloading required and describes the process undertaken by the code to pull in OpenAlex data using an API, clean the individual data source code, and compile the deduplicate results. 
+Instructions to download data needed to run this code is available [here](https://acrobat.adobe.com/id/urn:aaid:sc:VA6C2:1692e4dc-701d-4344-b38b-0fa9e4b491db). This document provides an overview of the manual data downloading required and describes the process undertaken by the code to pull in OpenAlex data using an API, clean the individual data source code, and compile the deduplicate results. 
 
 ## Using the Repository
 * Download the repository as a ZIP file to your computer
